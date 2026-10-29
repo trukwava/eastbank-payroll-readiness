@@ -1,0 +1,3 @@
+external_key,project,completion_date,invoice_date,due_date,amount,credit,payment,payment_date
+DEMO-2001,Riverside Apartments,2026-11-01,2026-11-08,2026-11-30,12000.00,500.00,1000.00,2026-11-09
+DEMO-2002,Oak Street School,2026-11-02,,,2500.01,0,0,

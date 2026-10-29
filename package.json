@@ -1,0 +1,12 @@
+{
+  "name": "eastbank-payroll-readiness",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.ts",
+    "test": "node --disable-warning=ExperimentalWarning --test test.ts"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
