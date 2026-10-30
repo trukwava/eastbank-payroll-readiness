@@ -320,7 +320,15 @@ function bind() {
               (x) =>
                 `${x.externalKey} | ${job(x.jobId)} | ${x.status} | remaining ${usd(x.remaining)} | billing lag ${x.billingLag ?? "Unknown"} | invoice clock ${x.clock ?? "Unknown"}`,
             )
-            .join("\n"),
+            .join("\n") +
+          "\n\n## Friday payroll reconciliation\n" +
+          (data.payrollHistory || []).map((w) =>
+            w.payrollDate + " | estimate " + usd(w.estimate) +
+            " | recorded Labor " + usd(w.actual) +
+            " | actual minus estimate " + usd(w.variance) +
+            " | sources " + w.sources.map((x) => job(x.jobId) + ": " + usd(x.amount) + " (" + x.source + ")").join("; ")
+          ).join("\n") +
+          "\n\nLabor actuals are unverified source entries, not a certified payroll close. Unknown actuals must not be interpreted as zero.\n",
       );
     };
   if ($("#backup"))
