@@ -4,7 +4,9 @@ let page = "overview",
   rows = [],
   csv = "",
   mapping = {},
-  triageFilter = "all";
+  triageFilter = "all",
+  backupPayload = null,
+  backupSummary = null;
 const $ = (s) => document.querySelector(s),
   esc = (v) =>
     String(v ?? "").replace(
@@ -240,7 +242,7 @@ function render() {
         "Settings & accountability",
         "Local demo. No bank, payroll, or model connection is configured.",
       ) +
-      `<div class="grid"><section class="panel"><h2>Organization settings</h2>${form("settings", field("Display timezone (IANA)", "timezone", "text", s.organization.timezone) + s.organization.categories.map((c, i) => field("Cost category " + (i + 1), "category" + i, "text", c)).join(""))}<div class="note">USD. Nonnegative integer cents. Credits and payments subtract from invoice value. Costs subtract from budget. Commitments subtract from cash headroom. Date-only deadlines use calendar days; exact instants store UTC.</div></section><section class="panel"><h2>Recovery & retention</h2><p>Records stay in local SQLite until reset or database deletion. Download a backup before resetting. Reset affects only the synthetic demo organization.</p><button class="secondary" id="backup">Download demo backup</button> <button class="secondary" id="reset">Reset synthetic demo</button><div class="note">Recorded cash: point-in-time sourced balance.<br>Payroll estimate: selected Monday plan.<br>Actual payroll: active Labor actuals on payroll date.<br>Remaining budget: approved budget minus actual costs.<br>No forecast guarantee. Expected receipts never change recorded cash.</div></section></div><section class="panel"><h2>Change history</h2>${
+      `<div class="grid"><section class="panel"><h2>Organization settings</h2>${form("settings", field("Display timezone (IANA)", "timezone", "text", s.organization.timezone) + s.organization.categories.map((c, i) => field("Cost category " + (i + 1), "category" + i, "text", c)).join(""))}<div class="note">USD. Nonnegative integer cents. Credits and payments subtract from invoice value. Costs subtract from budget. Commitments subtract from cash headroom. Date-only deadlines use calendar days; exact instants store UTC.</div></section><section class="panel"><h2>Recovery & retention</h2><p>Records stay in local SQLite until reset or database deletion. Download a backup before resetting. Reset affects only the synthetic demo organization.</p><button class="secondary" id="backup">Download demo backup</button> <button class="secondary" id="reset">Reset synthetic demo</button><div class="note"><b>Restore an earlier demo backup</b><p>Replacing records is destructive. Download a current backup first. Only validated demo-organization JSON is accepted.</p><label for="restore-file">Select backup JSON</label><input type="file" id="restore-file" accept=".json,application/json"><button class="secondary" id="restore-preview" ${backupPayload ? "" : "disabled"}>Validate & preview</button>${backupSummary ? '<p id="restore-summary" role="status">Valid backup · ' + esc(backupSummary.jobs) + ' jobs · ' + esc(backupSummary.invoices) + ' invoices · ' + esc(backupSummary.cashSnapshots) + ' cash snapshots · ' + esc(backupSummary.changeEvents) + ' history events. Example November 9 headroom: ' + usd(backupSummary.exampleHeadroom) + '</p><button class="btn" id="restore-accept">Restore validated backup</button>' : ""}</div><div class="note">Recorded cash: point-in-time sourced balance.<br>Payroll estimate: selected Monday plan.<br>Actual payroll: active Labor actuals on payroll date.<br>Remaining budget: approved budget minus actual costs.<br>No forecast guarantee. Expected receipts never change recorded cash.</div></section></div><section class="panel"><h2>Change history</h2>${
         s.auditEvents.length
           ? s.auditEvents
               .slice()
@@ -313,9 +315,55 @@ function bind() {
     $("#backup").onclick = () =>
       download(
         "eastbank-backup.json",
-        JSON.stringify(data.state, null, 2),
+        JSON.stringify({ format: "eastbank-demo-backup", version: 1, exportedAt: new Date().toISOString(), state: data.state }, null, 2),
         "application/json",
       );
+  if ($("#restore-file"))
+    $("#restore-file").onchange = async (e) => {
+      const file = e.target.files[0];
+      backupPayload = null;
+      backupSummary = null;
+      if (!file) return;
+      if (file.size > 900000) {
+        notice("Restore files must be smaller than 900 KB.");
+        render();
+        return;
+      }
+      try {
+        backupPayload = JSON.parse(await file.text());
+        render();
+        notice("Backup selected. Choose Validate & preview before restoring.");
+      } catch (error) {
+        notice("Invalid JSON backup: " + error.message);
+      }
+    };
+  if ($("#restore-preview"))
+    $("#restore-preview").onclick = async () => {
+      try {
+        backupSummary = (await action({ type: "restorePreview", backup: backupPayload })).summary;
+        render();
+        notice("Validation passed. Review record counts before restoring.");
+      } catch (error) {
+        backupSummary = null;
+        render();
+        notice("Restore blocked: " + error.message);
+      }
+    };
+  if ($("#restore-accept"))
+    $("#restore-accept").onclick = async () => {
+      if (!backupSummary || !backupPayload) return;
+      if (!confirm("REPLACE all current Eastbank demo records with this validated backup? Current edits will be lost."))
+        return;
+      try {
+        await action({ type: "restore", backup: backupPayload, confirmation: "RESTORE DEMO" });
+        backupPayload = null;
+        backupSummary = null;
+        await load();
+        notice("Demo backup restored. The restoration is recorded in change history.");
+      } catch (error) {
+        notice("Restore failed; current data was not replaced: " + error.message);
+      }
+    };
   if ($("#reset"))
     $("#reset").onclick = async () => {
       if (
