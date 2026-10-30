@@ -4,6 +4,7 @@ import { readFileSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { seed, snapshot, preview, money, date, validateState } from "./core.ts";
+import { inspectBackup } from "./backup.ts";
 import { collectionsDesk } from "./triage.ts";
 const root = fileURLToPath(new URL(".", import.meta.url));
 const port = Number(process.env.EASTBANK_PORT || "48739");
@@ -87,7 +88,26 @@ createServer(async (req, res) => {
       const id = () => crypto.randomUUID();
       if (b.type === "preview") {
         result = { rows: preview(s, b.csv, b.mapping) };
+      } else if (b.type === "restorePreview") {
+        result = { summary: inspectBackup(b.backup).summary };
       } else {
+        if (b.type === "restore") {
+          if (b.confirmation !== "RESTORE DEMO")
+            throw Error("Explicit RESTORE DEMO confirmation required");
+          const accepted = inspectBackup(b.backup);
+          const restored = structuredClone(accepted.state);
+          audit(restored, "Demo backup restored", {
+            previousRecordCounts: {
+              jobs: s.jobs.length,
+              invoices: s.invoices.length,
+              cashSnapshots: s.cashSnapshots.length,
+            },
+          }, { restoredRecordCounts: accepted.summary });
+          save(restored);
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ ok: true, summary: accepted.summary }));
+          return;
+        }
         if (b.type === "import") {
           const rows = preview(s, b.csv, b.mapping);
           if (

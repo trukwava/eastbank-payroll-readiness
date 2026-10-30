@@ -114,3 +114,67 @@ test("HTTP workflow: validation → import → payment → re-import → restart
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("HTTP backup restore: preview is read-only, requires confirmation, validates and survives restart", { timeout: 30000 }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), "eastbank-restore-"));
+  const port = await availablePort();
+  let server: Awaited<ReturnType<typeof startServer>> | null = null;
+  try {
+    server = await startServer(port, dir);
+    const base = server.origin;
+    const get = async () => {
+      const response = await fetch(base + "/api/state?asof=2026-11-09");
+      assert.equal(response.status, 200);
+      return response.json();
+    };
+    const post = async (payload: object) => {
+      const response = await fetch(base + "/api/action", {
+        method: "POST",
+        headers: { Origin: base, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      return { status: response.status, body: await response.json() };
+    };
+    const original = (await get()).state;
+    const backup = {
+      format: "eastbank-demo-backup", version: 1,
+      exportedAt: "2026-10-30T16:00:00Z", state: original,
+    };
+    const cashEntry = await post({
+      type: "cash", at: "2026-11-09T09:00:00-05:00",
+      amount: "11111.00", source: "Synthetic restored test snapshot",
+    });
+    assert.equal(cashEntry.status, 200);
+    assert.equal((await get()).view.cash.amount, 1111100);
+
+    const reviewed = await post({ type: "restorePreview", backup });
+    assert.equal(reviewed.status, 200);
+    assert.equal(reviewed.body.summary.exampleHeadroom, -650000);
+    assert.equal((await get()).view.cash.amount, 1111100, "Preview must not mutate records");
+
+    const noConsent = await post({ type: "restore", backup, confirmation: "no" });
+    assert.equal(noConsent.status, 400);
+    assert.equal((await get()).view.cash.amount, 1111100);
+
+    const poisoned = structuredClone(backup);
+    poisoned.state.invoices[0].jobId = "foreign-project";
+    const invalid = await post({ type: "restore", backup: poisoned, confirmation: "RESTORE DEMO" });
+    assert.equal(invalid.status, 400);
+    assert.equal((await get()).view.cash.amount, 1111100, "Invalid restore must remain atomic");
+
+    assert.equal((await post({ type: "restore", backup, confirmation: "RESTORE DEMO" })).status, 200);
+    const restored = await get();
+    assert.equal(restored.view.cash.amount, 1800000);
+    assert.equal(restored.view.headroom, -650000);
+    assert.equal(restored.state.auditEvents.at(-1).action, "Demo backup restored");
+    await stopServer(server.process);
+    server = null;
+    server = await startServer(port, dir);
+    const reopened = await get();
+    assert.equal(reopened.view.cash.amount, 1800000);
+    assert.equal(reopened.state.auditEvents.at(-1).action, "Demo backup restored");
+  } finally {
+    if (server) await stopServer(server.process);
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

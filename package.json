@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning server.ts",
-    "test": "node --disable-warning=ExperimentalWarning --test test.ts triage.test.ts integrity.test.ts integration.test.ts"
+    "test": "node --disable-warning=ExperimentalWarning --test test.ts triage.test.ts integrity.test.ts integration.test.ts backup.test.ts"
   },
   "engines": {
     "node": ">=24"
