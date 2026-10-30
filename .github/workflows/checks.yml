@@ -18,7 +18,8 @@ jobs:
       - run: node --check public/app.js
 
   browser:
-    runs-on: ubuntu-latest
+    # Pin to a Playwright-supported runner: ubuntu-latest currently resolves to 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
