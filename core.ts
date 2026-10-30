@@ -424,56 +424,148 @@ export function preview(s: RecordSet, text: string, mapping: any = {}) {
 }
 
 export function validateState(s: RecordSet) {
-  if (s.organization.id !== "demo" || s.organization.currency !== "USD")
+  if (!s || !s.organization || s.organization.id !== "demo" || s.organization.currency !== "USD")
     throw Error("Only demo USD organization supported");
   new Intl.DateTimeFormat("en", { timeZone: s.organization.timezone });
+  const present = (v: any, label: string) => {
+    if (typeof v !== "string" || !v.trim() || v.length > 200)
+      throw Error("Invalid or missing " + label);
+  };
+  const positiveCents = (v: any, label: string, allowZero = true) => {
+    if (!Number.isSafeInteger(v) || v < (allowZero ? 0 : 1) || v > 1e12)
+      throw Error("Invalid minor-unit money: " + label);
+  };
+  const validDate = (v: any, label: string) => {
+    if (typeof v !== "string") throw Error("Missing date: " + label);
+    date(v);
+  };
+  const instant = (v: any, label: string) => {
+    if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(v) ||
+        !Number.isFinite(Date.parse(v)))
+      throw Error("Invalid UTC timestamp: " + label);
+    validDate(v.slice(0, 10), label);
+  };
+  if (!Array.isArray(s.organization.categories) || s.organization.categories.length !== 5 ||
+    new Set(s.organization.categories).size !== 5)
+    throw Error("Exactly five distinct categories required");
+  for (const category of s.organization.categories) present(category, "category");
+
   const collections = [
-    "jobs",
-    "budgetVersions",
-    "changeOrders",
-    "weeklyEstimates",
-    "costActuals",
-    "cashSnapshots",
-    "invoices",
-    "invoicePayments",
-    "commitments",
-    "importBatches",
-    "mappings",
-    "auditEvents",
-  ];
+    "jobs", "budgetVersions", "changeOrders", "weeklyEstimates",
+    "costActuals", "cashSnapshots", "invoices", "invoicePayments",
+    "commitments", "importBatches", "mappings", "auditEvents",
+  ] as const;
   for (const name of collections) {
-    const ids = new Set();
+    if (!Array.isArray(s[name])) throw Error("Invalid collection: " + name);
+    const ids = new Set<string>();
     for (const x of s[name]) {
-      if (!x.id || ids.has(x.id)) throw Error("Missing or duplicate record ID");
+      if (!x || typeof x !== "object") throw Error("Invalid record in " + name);
+      present(x.id, name + " record ID");
+      if (ids.has(x.id)) throw Error("Duplicate record ID in " + name);
       ids.add(x.id);
       for (const key of ["amount", "credit", "payroll", "budget"])
-        if (
-          x[key] != null &&
-          (!Number.isSafeInteger(x[key]) || x[key] < 0 || x[key] > 1e12)
-        )
-          throw Error("Invalid minor-unit money");
+        if (x[key] != null) positiveCents(x[key], name + "." + key);
     }
   }
-  const keys = new Set();
-  for (const i of s.invoices) {
-    if (keys.has(i.externalKey)) throw Error("Duplicate external key");
-    keys.add(i.externalKey);
-    if (!s.jobs.some((j) => j.id === i.jobId))
-      throw Error("Unknown invoice project");
-    if (
-      i.credit +
-        s.invoicePayments
-          .filter((p) => p.invoiceId === i.id)
-          .reduce((a, p) => a + p.amount, 0) >
-      i.amount
-    )
+  const jobs = new Map(s.jobs.map((j) => [j.id, j]));
+  for (const job of s.jobs) {
+    present(job.name, "job name");
+    positiveCents(job.budget, "original job budget");
+  }
+  for (const version of s.budgetVersions) {
+    if (!jobs.has(version.jobId)) throw Error("Unknown budget project");
+    validDate(version.date, "budget version");
+    positiveCents(version.amount, "budget version");
+  }
+  for (const change of s.changeOrders) {
+    if (!jobs.has(change.jobId) || change.status !== "approved")
+      throw Error("Invalid approved change order");
+    validDate(change.date, "change order");
+    positiveCents(change.amount, "change order");
+  }
+  for (const estimate of s.weeklyEstimates) {
+    validDate(estimate.payrollDate, "payroll date");
+    instant(estimate.enteredAt, "payroll estimate entry");
+    present(estimate.source, "payroll estimate source");
+    positiveCents(estimate.payroll, "payroll estimate");
+  }
+  for (const cash of s.cashSnapshots) {
+    instant(cash.at, "cash snapshot");
+    present(cash.source, "cash snapshot source");
+    positiveCents(cash.amount, "cash snapshot");
+  }
+  const invoices = new Map(s.invoices.map((i) => [i.id, i]));
+  const keys = new Set<string>();
+  for (const invoice of s.invoices) {
+    present(invoice.externalKey, "invoice external key");
+    if (keys.has(invoice.externalKey)) throw Error("Duplicate external key");
+    keys.add(invoice.externalKey);
+    if (!jobs.has(invoice.jobId)) throw Error("Unknown invoice project");
+    validDate(invoice.completionDate, "work completion");
+    if (invoice.invoiceDate != null) {
+      validDate(invoice.invoiceDate, "invoice issue");
+      if (invoice.invoiceDate < invoice.completionDate)
+        throw Error("Invoice precedes completed work");
+    }
+    if (invoice.dueDate != null) {
+      validDate(invoice.dueDate, "invoice due");
+      if (invoice.invoiceDate && invoice.dueDate < invoice.invoiceDate)
+        throw Error("Due date precedes invoice");
+    }
+    if (invoice.expectedDate != null) validDate(invoice.expectedDate, "expected receipt");
+    positiveCents(invoice.amount, "original invoice");
+    positiveCents(invoice.credit, "invoice credit");
+    if (invoice.credit > invoice.amount) throw Error("Credit exceeds invoice");
+    if (invoice.credit) {
+      if (!invoice.invoiceDate || !invoice.creditDate)
+        throw Error("Credited invoice must have an issue and credit date");
+      validDate(invoice.creditDate, "invoice credit date");
+      if (invoice.creditDate < invoice.invoiceDate)
+        throw Error("Credit precedes invoice");
+    } else if (invoice.creditDate != null) {
+      validDate(invoice.creditDate, "invoice credit date");
+    }
+    if (invoice.source != null) present(invoice.source, "invoice source");
+  }
+  const payments = new Map<string, number>();
+  for (const payment of s.invoicePayments) {
+    const invoice = invoices.get(payment.invoiceId);
+    if (!invoice || !invoice.invoiceDate)
+      throw Error("Payment requires an issued invoice");
+    validDate(payment.date, "payment");
+    if (payment.date < invoice.invoiceDate)
+      throw Error("Payment precedes invoice");
+    positiveCents(payment.amount, "invoice payment", false);
+    const total = (payments.get(payment.invoiceId) || 0) + payment.amount;
+    payments.set(payment.invoiceId, total);
+    if (!Number.isSafeInteger(total) || total + invoice.credit > invoice.amount)
       throw Error("Invoice is overpaid");
   }
-  for (const p of s.invoicePayments)
-    if (!s.invoices.some((i) => i.id === p.invoiceId))
-      throw Error("Unknown payment invoice");
-  for (const c of s.costActuals)
-    if (!s.jobs.some((j) => j.id === c.jobId))
-      throw Error("Unknown cost project");
+  const costs = new Map(s.costActuals.map((c) => [c.id, c]));
+  const corrections = new Set<string>();
+  for (const cost of s.costActuals) {
+    if (!jobs.has(cost.jobId)) throw Error("Unknown cost project");
+    if (cost.kind !== "actual" && cost.kind !== "estimate")
+      throw Error("Unknown cost entry kind");
+    present(cost.category, "cost category");
+    present(cost.source, "cost source");
+    validDate(cost.date, "cost date");
+    positiveCents(cost.amount, "cost amount");
+    if (cost.replaces) {
+      const original = costs.get(cost.replaces);
+      if (!original || cost.replaces === cost.id || corrections.has(cost.replaces) ||
+          original.jobId !== cost.jobId || original.kind !== cost.kind ||
+          cost.date < original.date)
+        throw Error("Invalid cost correction chain");
+      corrections.add(cost.replaces);
+    }
+  }
+  for (const commitment of s.commitments) {
+    present(commitment.label, "commitment description");
+    validDate(commitment.date, "commitment date");
+    positiveCents(commitment.amount, "commitment");
+    if (typeof commitment.included !== "boolean")
+      throw Error("Commitment included flag must be boolean");
+  }
   return s;
 }
