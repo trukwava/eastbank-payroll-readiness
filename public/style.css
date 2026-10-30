@@ -250,6 +250,7 @@ button.primary {
 }
 .card,
 .panel {
+  min-width: 0;
   border: 1px solid #dde2d7;
   background: #fff;
   border-radius: 8px;
@@ -529,6 +530,10 @@ a {
   }
   .heading {
     align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .heading > * {
+    min-width: 0;
   }
   h1 {
     font-size: 28px;
