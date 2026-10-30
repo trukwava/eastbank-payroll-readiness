@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { seed, snapshot, preview, money, date, validateState } from "./core.ts";
 import { inspectBackup } from "./backup.ts";
 import { collectionsDesk } from "./triage.ts";
+import { payrollHistory } from "./reconciliation.ts";
 const root = fileURLToPath(new URL(".", import.meta.url));
 const port = Number(process.env.EASTBANK_PORT || "48739");
 if (!Number.isInteger(port) || port < 1024 || port > 65535)
@@ -70,6 +71,7 @@ createServer(async (req, res) => {
             u.searchParams.get("scenario") === "true",
           ),
           collectionsDesk: collectionsDesk(s, u.searchParams.get("asof") || "2026-11-09"),
+          payrollHistory: payrollHistory(s, u.searchParams.get("asof") || "2026-11-09"),
         }),
       );
       return;
