@@ -2,6 +2,9 @@ name: Financial and browser checks
 on: [push, pull_request]
 permissions:
   contents: read
+concurrency:
+  group: eastbank-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
     runs-on: ubuntu-latest
