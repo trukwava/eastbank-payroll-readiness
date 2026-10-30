@@ -3,6 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { readFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { seed, snapshot, preview, money, date, validateState } from "./core.ts";
+import { collectionsDesk } from "./triage.ts";
 const root = fileURLToPath(new URL(".", import.meta.url));
 mkdirSync(root + "data", { recursive: true });
 const db = new DatabaseSync(root + "data/eastbank.sqlite");
@@ -60,6 +61,7 @@ createServer(async (req, res) => {
             u.searchParams.get("asof") || "2026-11-09",
             u.searchParams.get("scenario") === "true",
           ),
+          collectionsDesk: collectionsDesk(s, u.searchParams.get("asof") || "2026-11-09"),
         }),
       );
       return;
