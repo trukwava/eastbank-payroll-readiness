@@ -276,35 +276,66 @@ export function seed(): RecordSet {
     auditEvents: [],
   };
 }
-export function csvParse(text: string) {
-  if (text.length > 1000000) throw Error("CSV limit is 1 MB");
+export function csvParse(input: string) {
+  if (typeof input !== "string" || input.length > 1000000)
+    throw Error("CSV must be text no larger than 1 MB");
+  // Excel/UTF-8 exports commonly contain an initial byte-order mark.
+  const text = input.startsWith("\uFEFF") ? input.slice(1) : input;
   const rows: string[][] = [];
-  let row: string[] = [],
-    v = "",
-    q = false;
+  let row: string[] = [];
+  let field = "";
+  let quoted = false;
+  let quoteClosed = false;
+  const pushField = () => {
+    row.push(field);
+    field = "";
+    quoteClosed = false;
+  };
+  const pushRow = () => {
+    if (row.some((value) => value.length > 0)) rows.push(row);
+    row = [];
+    if (rows.length > 10000) throw Error("CSV limit is 10,000 non-empty rows");
+  };
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
-    if (c === '"') {
-      if (q && text[i + 1] === '"') {
-        v += '"';
-        i++;
-      } else q = !q;
-    } else if (!q && (c === "," || c === "\n")) {
-      row.push(v.replace(/\r$/, ""));
-      v = "";
-      if (c === "\n") {
-        rows.push(row);
-        row = [];
+    if (quoted) {
+      if (c === '"') {
+        if (text[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else {
+          quoted = false;
+          quoteClosed = true;
+        }
+      } else {
+        field += c;
       }
-    } else v += c;
+      continue;
+    }
+    if (c === '"') {
+      if (field.length || quoteClosed) throw Error("Malformed CSV quote at character " + (i + 1));
+      quoted = true;
+      continue;
+    }
+    if (c === "," || c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      else if (c === "\r" && i !== text.length - 1)
+        throw Error("Malformed CSV carriage return at character " + (i + 1));
+      pushField();
+      if (c !== ",") pushRow();
+      continue;
+    }
+    if (quoteClosed) throw Error("Unexpected text after closing CSV quote at character " + (i + 1));
+    field += c;
   }
-  if (q) throw Error("Unclosed CSV quote");
-  if (v || row.length) {
-    row.push(v);
-    rows.push(row);
+  if (quoted) throw Error("Unclosed CSV quote");
+  if (field.length || quoteClosed || row.length) {
+    pushField();
+    pushRow();
   }
-  return rows.filter((r) => r.some(Boolean));
+  return rows;
 }
+
 export function preview(s: RecordSet, text: string, mapping: any = {}) {
   const rows = csvParse(text),
     header = rows.shift();
