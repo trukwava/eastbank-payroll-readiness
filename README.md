@@ -12,7 +12,7 @@ npm start
 npm test
 ```
 
-Or run `node server.ts` and `node --test test.ts triage.test.ts integrity.test.ts integration.test.ts` directly. The server binds to 127.0.0.1. If the port is occupied, stop your own previous Eastbank process before restarting. `.env.example` documents the credential-free configuration. The SQLite database initializes automatically from fixtures; migration 1 is in `schema.sql` and applied by the server.
+Or run `node server.ts` and `node --test test.ts triage.test.ts integrity.test.ts integration.test.ts backup.test.ts` directly. The server binds to 127.0.0.1. If the port is occupied, stop your own previous Eastbank process before restarting. `.env.example` documents the credential-free configuration. The SQLite database initializes automatically from fixtures; migration 1 is in `schema.sql` and applied by the server.
 
 The app uses TypeScript executed by Node's built-in type stripping, built-in HTTP and SQLite, and a small browser interface. It intentionally has no framework/dependency installation for this single-organization local prototype. Type stripping is not static type checking; a strict compiler setup remains future engineering work.
 
@@ -26,7 +26,7 @@ The app uses TypeScript executed by Node's built-in type stripping, built-in HTT
 5. Use **Import invoices** with `samples/valid.csv`. Preview, review, then accept. Re-import it: totals must remain unchanged. Try `duplicates.csv`, `invalid.csv`, and `renamed-project.csv`. Map Riverside Residences to Riverside Apartments to resolve the renamed project.
 6. Use **Project budgets** for original/approved budgets, active actual costs and remaining budget. Estimates are shown separately. Create projects or approved change orders here.
 7. Export the weekly Markdown brief from the overview; it uses the exact displayed snapshot. Change the as-of date to inspect freshness and historical effective dates.
-8. Settings provides timezone/category configuration, change history, JSON backup, and demo reset. Records survive page reloads and server restarts in `data/eastbank.sqlite`.
+8. Settings provides timezone/category configuration, change history, **versioned JSON export with validated, confirmed restore**, and demo reset. See [backup and recovery instructions](docs/BACKUP_RECOVERY.md). Records survive page reloads and server restarts in `data/eastbank.sqlite`.
 
 Import header, exactly:
 
@@ -50,7 +50,7 @@ Seed: three projects, twelve invoices, two partial payments, one credit, two wee
 - [x] Collections action desk with overdue, unbilled, due-soon and missing-deadline prioritization
 - [x] Partial payments, original invoice values and effective credits
 - [x] Job budgets/change orders, weekly estimates/actuals, corrections and history
-- [x] Operating brief, local backup and synthetic-only reset
+- [x] Operating brief, versioned demo backup, validated restore and synthetic-only reset
 - [ ] Production authentication, normalized multi-tenant storage and deployment hardening
 - [ ] Multiple dated credit notes, retainage and accounting-system adapters
 - [ ] Strict TypeScript checking and comprehensive automated browser/accessibility coverage
