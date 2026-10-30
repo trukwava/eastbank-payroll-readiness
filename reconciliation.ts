@@ -22,6 +22,8 @@ export function payrollHistory(state: RecordSet, asof: string) {
     return current;
   };
   const effective = state.costActuals.filter((entry) => entry.date <= asof);
+  // Detect malformed lineages even when cyclic entries would hide each other as superseded.
+  for (const entry of effective) root(entry);
   const superseded = new Set(effective.map((entry) => entry.replaces).filter(Boolean));
   const active = effective.filter((entry) => !superseded.has(entry.id));
   const knownEstimates = state.weeklyEstimates.filter(
