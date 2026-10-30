@@ -105,6 +105,20 @@ test("real Chromium: navigation, payroll, collections, invoice preview, persiste
     assert.equal((await json(server.origin, "/api/state?asof=2026-11-09")).view.headroom, -650000,
       "Importing expected invoices must not change recorded cash or payroll shortfall");
 
+    await navigation.getByRole("button", { name: /Invoices & collections/ }).click();
+    const expectedReceipts = page.locator(".card").filter({ hasText: "DATED EXPECTED RECEIPTS" }).locator(".metric");
+    assert.equal(await expectedReceipts.textContent(), "$12,000.00");
+    await page.locator("#asof").fill("2026-11-17");
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll(".card")].some((card) =>
+        card.textContent.includes("DATED EXPECTED RECEIPTS") &&
+        card.querySelector(".metric")?.textContent.trim() === "$0.00"));
+    await page.locator("#asof").fill("2026-11-09");
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll(".card")].some((card) =>
+        card.textContent.includes("DATED EXPECTED RECEIPTS") &&
+        card.querySelector(".metric")?.textContent.trim() === "$12,000.00"));
+    await navigation.getByRole("button", { name: /Payroll readiness/ }).click();
     const downloadEvent = page.waitForEvent("download");
     await page.getByRole("button", { name: /Export weekly brief/ }).click();
     const downloaded = await downloadEvent;
