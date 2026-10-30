@@ -12,7 +12,7 @@ npm start
 npm test
 ```
 
-Or run `node server.ts` and `node --test test.ts` directly. The server binds to 127.0.0.1. If the port is occupied, stop your own previous Eastbank process before restarting. `.env.example` documents the credential-free configuration. The SQLite database initializes automatically from fixtures; migration 1 is in `schema.sql` and applied by the server.
+Or run `node server.ts` and `node --test test.ts triage.test.ts` directly. The server binds to 127.0.0.1. If the port is occupied, stop your own previous Eastbank process before restarting. `.env.example` documents the credential-free configuration. The SQLite database initializes automatically from fixtures; migration 1 is in `schema.sql` and applied by the server.
 
 The app uses TypeScript executed by Node's built-in type stripping, built-in HTTP and SQLite, and a small browser interface. It intentionally has no framework/dependency installation for this single-organization local prototype. Type stripping is not static type checking; a strict compiler setup remains future engineering work.
 
@@ -20,6 +20,7 @@ The app uses TypeScript executed by Node's built-in type stripping, built-in HTT
 
 1. Open **Payroll readiness**, with demo as-of **2026-11-09**. Recorded cash is **$18,000**, payroll is **$22,500**, commitments are **$2,000**, projected shortfall is **$6,500**. The November 5 cash snapshot is stale.
 2. Inspect the payroll bridge and invoices. The $12,000 invoice expected November 16 is outside the November 13 payroll horizon; it never reduces this shortfall. The what-if toggle separately includes expected receipts only when they fall within the selected horizon.
+2a. Open **Collections action desk** for an as-of priority queue: overdue, unbilled work, due within seven days, or missing due dates. Filters and amounts are derived from the existing invoice/payment ledger; see [collections rules](docs/COLLECTIONS_DESK.md).
 3. Use **Weekly workspace** to add a sourced cash snapshot, payroll estimate, estimates/actuals by project, or a commitment. Timestamps must include timezone offsets. Select a correction target to append a replacement without deleting history.
 4. Use **Invoices & collections** to inspect clocks and record partial/full payments. A payment does not automatically update cash. EB-1001 has a seven-calendar-day billing lag.
 5. Use **Import invoices** with `samples/valid.csv`. Preview, review, then accept. Re-import it: totals must remain unchanged. Try `duplicates.csv`, `invalid.csv`, and `renamed-project.csv`. Map Riverside Residences to Riverside Apartments to resolve the renamed project.
@@ -37,7 +38,7 @@ See [model and rules](docs/MODEL.md) for signs, states, persistence, security, r
 
 ## Acceptance and verification
 
-`node --test test.ts` checks the $6,500 shortfall; seven-day billing lag; exact money; partial payments/credit; unknown inputs; invalid dates; duplicate, conflict and mapping handling; payment-date clocks; receipt-scenario isolation; timezone boundaries; and revised estimates. GitHub Actions runs the tests on Node 24.
+`npm test` runs 17 focused tests covering the $6,500 shortfall; seven-day billing lag; exact money; partial payments/credit; unknown inputs; invalid dates; duplicate, conflict and mapping handling; payment-date clocks; receipt-scenario isolation; timezone boundaries; and revised estimates. GitHub Actions runs the tests on Node 24.
 
 Seed: three projects, twelve invoices, two partial payments, one credit, two weeks of payroll/job estimates and job actuals, approved change order, two commitments and a stale cash snapshot. `samples/expected.md` records expected import effects. The running application has been reviewed in a browser; see `docs/VERIFICATION.md` for actual results and remaining gaps.
 
@@ -46,6 +47,7 @@ Seed: three projects, twelve invoices, two partial payments, one credit, two wee
 - [x] Local persistent demo, deterministic calculations and sourced snapshots
 - [x] As-of readiness, explicit commitments, missing/stale inputs, separate receipt scenario
 - [x] CSV preview, server validation, explicit job mapping, duplicate/conflict handling
+- [x] Collections action desk with overdue, unbilled, due-soon and missing-deadline prioritization
 - [x] Partial payments, original invoice values and effective credits
 - [x] Job budgets/change orders, weekly estimates/actuals, corrections and history
 - [x] Operating brief, local backup and synthetic-only reset
