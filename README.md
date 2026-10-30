@@ -16,6 +16,10 @@ Or run `node server.ts` and `node --test test.ts triage.test.ts integrity.test.t
 
 The app uses TypeScript executed by Node's built-in type stripping, built-in HTTP and SQLite, and a small browser interface. It intentionally has no framework/dependency installation for this single-organization local prototype. Type stripping is not static type checking; a strict compiler setup remains future engineering work.
 
+## Browser verification and keyboard access
+
+The app includes a [real Chromium smoke test](docs/BROWSER_VERIFICATION.md) with keyboard skip navigation, focusable page headings and tables, active-page semantics, retained filter focus, and dynamic invoice expectations. To run it locally: Node 24, `npm install`, `npx playwright install chromium`, then `npm run test:browser`. CI runs Chromium on Ubuntu 24.04. The normal `npm start` application needs no installed runtime packages. Browser smoke checks do not establish WCAG conformance.
+
 ## Operator guide
 
 1. Open **Payroll readiness**, with demo as-of **2026-11-09**. Recorded cash is **$18,000**, payroll is **$22,500**, commitments are **$2,000**, projected shortfall is **$6,500**. The November 5 cash snapshot is stale.
