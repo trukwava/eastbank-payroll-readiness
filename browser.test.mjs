@@ -145,7 +145,7 @@ test("real Chromium: navigation, payroll, collections, invoice preview, persiste
     assert.match(brief, /Signed projected headroom: -\$6,500\.00/);
     assert.match(brief, /DEMO-2001/);
     assert.match(brief, /Friday payroll reconciliation/);
-    assert.match(brief, /2026-11-06 \\| estimate \\$21,000\\.00/);
+    assert.match(brief, /2026-11-06 \| estimate \$21,000\.00/);
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload();
