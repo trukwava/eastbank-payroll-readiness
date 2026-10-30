@@ -56,9 +56,10 @@ function go(p) {
   page = p;
   notice("");
   render();
+  document.querySelector("#content h1")?.focus();
 }
 const heading = (title, desc, button = "") =>
-    `<div class="heading"><div><div class="eyebrow">EASTBANK / OPERATING DESK</div><h1>${title}</h1><p style="margin:0;font-size:12px">${desc}</p></div>${button}</div>`,
+    `<div class="heading"><div><div class="eyebrow">EASTBANK / OPERATING DESK</div><h1 tabindex="-1">${title}</h1><p style="margin:0;font-size:12px">${desc}</p></div>${button}</div>`,
   card = (label, value, foot, cls = "") =>
     `<div class="card ${cls}"><div class="metric-label">${label}</div><div class="metric">${value}</div><small>${foot}</small></div>`,
   line = (a, b) => `<div class="line"><span>${a}</span><b>${b}</b></div>`;
@@ -83,7 +84,12 @@ function render() {
   const { state: s, view: v } = data;
   document
     .querySelectorAll("nav button")
-    .forEach((b) => b.classList.toggle("active", b.dataset.page === page));
+    .forEach((b) => {
+      const active = b.dataset.page === page;
+      b.classList.toggle("active", active);
+      if (active) b.setAttribute("aria-current", "page");
+      else b.removeAttribute("aria-current");
+    });
   let h = "";
   if (page === "overview") {
     h = heading(
@@ -253,6 +259,11 @@ function render() {
           : "<p>No edits yet. Accepted imports, entries, and corrections appear here.</p>"
       }</section>`;
   $("#content").innerHTML = h;
+  document.querySelectorAll(".table-wrap").forEach((wrap) => {
+    wrap.tabIndex = 0;
+    wrap.setAttribute("role", "region");
+    wrap.setAttribute("aria-label", "Scrollable data table");
+  });
   bind();
 }
 function download(name, text, type = "text/plain") {
@@ -289,6 +300,7 @@ function bind() {
     $("#triage-filter").onchange = (e) => {
       triageFilter = e.target.value;
       render();
+      $("#triage-filter")?.focus();
     };
   if ($("#scenario"))
     $("#scenario").onchange = (e) => {
