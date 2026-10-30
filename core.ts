@@ -112,6 +112,7 @@ export function snapshot(s: RecordSet, asof: string, scenario = false) {
     ? invoices
         .filter(
           (x) =>
+            x.issued &&
             x.expectedDate &&
             x.expectedDate >= asof &&
             payroll &&
