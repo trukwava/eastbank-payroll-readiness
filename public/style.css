@@ -28,9 +28,31 @@ button {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
-select:focus-visible {
+select:focus-visible,
+textarea:focus-visible,
+.table-wrap:focus-visible {
   outline: 3px solid #d5a34b;
   outline-offset: 3px;
+}
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  transform: translateY(-150%);
+  z-index: 999;
+  background: #fff;
+  color: #143e34;
+  border: 2px solid #143e34;
+  border-radius: 5px;
+  padding: 12px 16px;
+  font-weight: 600;
+}
+.skip-link:focus {
+  transform: translateY(0);
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
 }
 aside {
   position: fixed;
@@ -228,6 +250,7 @@ button.primary {
 }
 .card,
 .panel {
+  min-width: 0;
   border: 1px solid #dde2d7;
   background: #fff;
   border-radius: 8px;
@@ -507,6 +530,10 @@ a {
   }
   .heading {
     align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .heading > * {
+    min-width: 0;
   }
   h1 {
     font-size: 28px;
