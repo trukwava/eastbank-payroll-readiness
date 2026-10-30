@@ -12,7 +12,7 @@ npm start
 npm test
 ```
 
-Or run `node server.ts` and `node --test test.ts triage.test.ts` directly. The server binds to 127.0.0.1. If the port is occupied, stop your own previous Eastbank process before restarting. `.env.example` documents the credential-free configuration. The SQLite database initializes automatically from fixtures; migration 1 is in `schema.sql` and applied by the server.
+Or run `node server.ts` and `node --test test.ts triage.test.ts integrity.test.ts integration.test.ts` directly. The server binds to 127.0.0.1. If the port is occupied, stop your own previous Eastbank process before restarting. `.env.example` documents the credential-free configuration. The SQLite database initializes automatically from fixtures; migration 1 is in `schema.sql` and applied by the server.
 
 The app uses TypeScript executed by Node's built-in type stripping, built-in HTTP and SQLite, and a small browser interface. It intentionally has no framework/dependency installation for this single-organization local prototype. Type stripping is not static type checking; a strict compiler setup remains future engineering work.
 
@@ -38,7 +38,7 @@ See [model and rules](docs/MODEL.md) for signs, states, persistence, security, r
 
 ## Acceptance and verification
 
-`npm test` runs 17 focused tests covering the $6,500 shortfall; seven-day billing lag; exact money; partial payments/credit; unknown inputs; invalid dates; duplicate, conflict and mapping handling; payment-date clocks; receipt-scenario isolation; timezone boundaries; and revised estimates. GitHub Actions runs the tests on Node 24.
+`npm test` runs financial, collections, integrity and isolated HTTP integration tests covering the $6,500 shortfall; seven-day billing lag; exact money; partial payments/credit; unknown inputs; invalid dates; duplicate, conflict and mapping handling; payment-date clocks; receipt-scenario isolation; timezone boundaries; and revised estimates. GitHub Actions runs the tests on Node 24. The HTTP integration suite creates its own temporary SQLite database, checks server-origin rejection, re-imports after a later manual payment, restarts the server and verifies persistence without touching the operator's demo data. Optional environment variables `EASTBANK_PORT` and `EASTBANK_DATA_DIR` are documented in `.env.example`.
 
 Seed: three projects, twelve invoices, two partial payments, one credit, two weeks of payroll/job estimates and job actuals, approved change order, two commitments and a stale cash snapshot. `samples/expected.md` records expected import effects. The running application has been reviewed in a browser; see `docs/VERIFICATION.md` for actual results and remaining gaps.
 
