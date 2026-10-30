@@ -1,10 +1,14 @@
-name: Financial checks
+name: Financial and browser checks
 on: [push, pull_request]
 permissions:
   contents: read
+concurrency:
+  group: eastbank-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -12,3 +16,16 @@ jobs:
           node-version: "24"
       - run: npm test
       - run: node --check public/app.js
+
+  browser:
+    # Pin to a Playwright-supported runner: ubuntu-latest currently resolves to 26.04.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser

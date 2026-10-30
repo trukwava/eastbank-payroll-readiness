@@ -7,14 +7,15 @@
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
-    <aside>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <aside aria-label="Application sidebar">
       <a class="brand" href="/"
         >E<span>EASTBANK<br /><small>PAINTING OPERATIONS</small></span></a
       >
       <div class="workspace">
         EB <span>Eastbank Painting<small>Demo organization · USD</small></span>
       </div>
-      <nav>
+      <nav aria-label="Main navigation">
         <button data-page="overview">◉ &nbsp; Payroll readiness</button
         ><button data-page="triage">⚑ &nbsp; Collections action desk</button
         ><button data-page="invoices">▤ &nbsp; Invoices & collections</button
@@ -29,12 +30,12 @@
         >
       </div>
     </aside>
-    <main>
+    <main id="main-content" tabindex="-1">
       <header>
         <div>OPERATIONS <span>/</span> WEEKLY CASH REVIEW</div>
         <label>As of <input id="asof" type="date" value="2026-11-09" /></label>
       </header>
-      <div id="notice" role="status"></div>
+      <div id="notice" role="status" aria-live="polite" aria-atomic="true"></div>
       <div id="content"></div>
       <footer>
         Eastbank Painting · Synthetic demonstration data
