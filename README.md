@@ -16,6 +16,10 @@ Or run `node server.ts` and `node --test test.ts triage.test.ts integrity.test.t
 
 The app uses TypeScript executed by Node's built-in type stripping, built-in HTTP and SQLite, and a small browser interface. It intentionally has no framework/dependency installation for this single-organization local prototype. Type stripping is not static type checking; a strict compiler setup remains future engineering work.
 
+## Browser verification and keyboard access
+
+The application includes a [real Chromium smoke test](docs/BROWSER_VERIFICATION.md) and improved keyboard navigation (skip link, focusable page headings and data tables, active-page semantics, and retained filter focus). To run it locally, use Node 24, `npm install`, `npx playwright install chromium`, and `npm run test:browser`. GitHub Actions runs this separately from `npm test`. The ordinary `npm start` app has no runtime package dependency. This does **not** constitute a full screen-reader or WCAG audit.
+
 ## Operator guide
 
 1. Open **Payroll readiness**, with demo as-of **2026-11-09**. Recorded cash is **$18,000**, payroll is **$22,500**, commitments are **$2,000**, projected shortfall is **$6,500**. The November 5 cash snapshot is stale.
