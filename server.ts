@@ -118,7 +118,7 @@ createServer(async (req, res) => {
             id: id(),
             amount: money(b.amount),
             at: new Date(b.at).toISOString(),
-            source: String(b.source).slice(0, 200),
+            source: String(b.source ?? "").trim().slice(0, 200),
           };
           if (!x.source) throw Error("Source required");
           s.cashSnapshots.push(x);
@@ -130,7 +130,7 @@ createServer(async (req, res) => {
             payrollDate: b.date,
             payroll: money(b.amount),
             enteredAt: new Date(b.enteredAt).toISOString(),
-            source: String(b.source).slice(0, 200),
+            source: String(b.source ?? "").trim().slice(0, 200),
           };
           if (!x.source) throw Error("Source required");
           const previous = s.weeklyEstimates
@@ -155,7 +155,7 @@ createServer(async (req, res) => {
             category: b.category,
             amount: money(b.amount),
             date: b.date,
-            source: String(b.source).slice(0, 200),
+            source: String(b.source ?? "").trim().slice(0, 200),
             kind: b.kind === "estimate" ? "estimate" : "actual",
             replaces: old?.id,
           };
@@ -228,11 +228,12 @@ createServer(async (req, res) => {
         } else if (b.type === "commitment") {
           const x = {
             id: id(),
-            label: String(b.label).slice(0, 100),
+            label: String(b.label ?? "").trim().slice(0, 100),
             amount: money(b.amount),
             date: date(b.date),
             included: true,
           };
+          if (!x.label) throw Error("Commitment description required");
           s.commitments.push(x);
           audit(s, "Commitment added", null, x);
         } else if (b.type === "reset") {
