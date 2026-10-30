@@ -54,6 +54,5 @@ Seed: three projects, twelve invoices, two partial payments, one credit, two wee
 - [ ] Strict TypeScript checking and comprehensive automated browser/accessibility coverage
 - [ ] Real office-manager pilot; no customer validation or time-saving claim
 
-## Source note
 
-Original implementation inspired by the user-supplied description and [Pursuit Lookbook: Quality Wet Paint](https://lookbook.pursuit.org/projects/quality-wet-paint). The reference page could not be retrieved during the build. No reference code, branding, customer data or performance/adoption claims were used. Eastbank Painting and every record are fictional. This is an operating visibility prototype, not accounting advice, production payroll software or a guarantee of future cash.
+Eastbank Painting and every record are fictional. This is an operating visibility prototype, not accounting advice, production payroll software or a guarantee of future cash.
