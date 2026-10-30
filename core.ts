@@ -592,6 +592,20 @@ export function validateState(s: RecordSet) {
       corrections.add(cost.replaces);
     }
   }
+  // A restored backup may contain references that individual records appear
+  // to validate but collectively form a cycle. Reject them before persistence.
+  const visiting = new Set<string>();
+  const checked = new Set<string>();
+  const checkCorrection = (entry: any) => {
+    if (checked.has(entry.id)) return;
+    if (visiting.has(entry.id)) throw Error("Cyclic cost correction chain");
+    visiting.add(entry.id);
+    if (entry.replaces) checkCorrection(costs.get(entry.replaces));
+    visiting.delete(entry.id);
+    checked.add(entry.id);
+  };
+  for (const cost of s.costActuals) checkCorrection(cost);
+
   for (const commitment of s.commitments) {
     present(commitment.label, "commitment description");
     validDate(commitment.date, "commitment date");
