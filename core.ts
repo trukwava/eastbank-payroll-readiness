@@ -372,6 +372,9 @@ export function preview(s: RecordSet, text: string, mapping: any = {}) {
         source: "CSV import",
       };
       const old = s.invoices.find((x) => x.externalKey === key);
+      const importedBaseline = s.importBatches
+        .flatMap((batch) => batch.rows || [])
+        .find((row) => row.status === "Ready" && row.normalized?.externalKey === key);
       let status = "Ready";
       if (seen.has(key))
         status = seen.get(key) === JSON.stringify(r) ? "Duplicate" : "Conflict";
@@ -394,7 +397,9 @@ export function preview(s: RecordSet, text: string, mapping: any = {}) {
             .sort()
             .at(-1) || "";
         status =
-          same && oldPaid === p && (!p || oldPaymentDate === paymentDate)
+          same &&
+          (importedBaseline ? importedBaseline.payment === p : oldPaid === p) &&
+          (!p || (importedBaseline ? importedBaseline.paymentDate === paymentDate : oldPaymentDate === paymentDate))
             ? "Duplicate"
             : "Conflict";
       }
