@@ -89,3 +89,18 @@ test("foreign project identifiers and duplicate external keys are rejected", () 
   duplicate.invoices[1].externalKey = duplicate.invoices[0].externalKey;
   assert.throws(() => validateState(duplicate), /Duplicate external key/);
 });
+
+test("backups with cyclic cost corrections cannot pass financial state validation", () => {
+  const s = seed();
+  s.costActuals.push({
+    id: "cycle-one", jobId: "j1", kind: "actual", category: "Labor",
+    amount: 600000, date: "2026-11-06", source: "Invalid correction",
+    replaces: "cycle-two",
+  });
+  s.costActuals.push({
+    id: "cycle-two", jobId: "j1", kind: "actual", category: "Labor",
+    amount: 600000, date: "2026-11-06", source: "Invalid correction",
+    replaces: "cycle-one",
+  });
+  assert.throws(() => validateState(s), /Cyclic cost correction chain/);
+});
