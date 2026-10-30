@@ -85,6 +85,21 @@ test("real Chromium: navigation, payroll, collections, invoice preview, persiste
     assert.equal(await page.locator("#triage-filter").evaluate((el) => document.activeElement === el), true,
       "Changing filter should not lose keyboard focus");
 
+    await navigation.getByRole("button", { name: /Weekly workspace/ }).click();
+    await page.getByRole("heading", { name: "The weekly workspace" }).waitFor();
+    const reconciliation = page.locator("section.panel").filter({
+      has: page.getByRole("heading", { name: "Friday payroll reconciliation" }),
+    });
+    const firstFriday = reconciliation.locator("tbody tr").filter({ hasText: "2026-11-06" });
+    assert.match(await firstFriday.textContent(), /\$21,000\.00/);
+    assert.match(await firstFriday.textContent(), /Matches estimate/);
+    await page.locator("#asof").fill("2026-11-14");
+    const secondFriday = reconciliation.locator("tbody tr").filter({ hasText: "2026-11-13" });
+    await secondFriday.waitFor();
+    assert.match(await secondFriday.textContent(), /Unknown/);
+    await page.locator("#asof").fill("2026-11-09");
+    await page.getByRole("heading", { name: "The weekly workspace" }).waitFor();
+
     await navigation.getByRole("button", { name: /Import invoices/ }).click();
     await page.getByRole("heading", { name: "Bring your invoices into focus." }).waitFor();
     const csv = readFileSync(join(root, "samples", "valid.csv"), "utf8");
