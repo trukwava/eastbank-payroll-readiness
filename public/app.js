@@ -3,7 +3,8 @@ let page = "overview",
   scenario = false,
   rows = [],
   csv = "",
-  mapping = {};
+  mapping = {},
+  triageFilter = "all";
 const $ = (s) => document.querySelector(s),
   esc = (v) =>
     String(v ?? "").replace(
@@ -108,7 +109,7 @@ function render() {
       [
         usd(v.unpaid) + " still to collect",
         "Expected payments are plans, never available cash.",
-        "invoices",
+        "triage",
         "Open collections",
       ],
     ]
@@ -119,6 +120,46 @@ function render() {
       .join(
         "",
       )}</section></div><section class="panel"><div class="panel-head"><div><h2>Invoices that need attention</h2><span class="muted">Elapsed calendar days · missing dates stay unknown</span></div><button class="secondary" data-go="invoices">View all invoices →</button></div>${invoiceTable(v.invoices.filter((x) => x.remaining > 0).slice(0, 4))}</section>`;
+  }
+
+  if (page === "triage") {
+    const d = data.collectionsDesk;
+    const labels = {
+      overdue: "Overdue", unbilled: "Completed, not invoiced",
+      dueSoon: "Due within 7 days", missingDue: "Due date missing",
+      scheduled: "Scheduled later",
+    };
+    const clock = (x) => x.kind === "overdue"
+      ? Math.abs(x.clockDays) + " days overdue"
+      : x.kind === "unbilled"
+        ? (x.clockDays == null ? "Age unknown" : x.clockDays + " days since completion")
+        : x.kind === "dueSoon" || x.kind === "scheduled"
+          ? x.clockDays + " days until due" : "Unknown due date";
+    const matches = triageFilter === "all" ? d.items
+      : d.items.filter((x) => x.kind === triageFilter);
+    h = heading(
+      "The collections action desk.",
+      "A source-backed queue for billing and follow-ups—not a cash forecast.",
+      '<button class="secondary" data-go="invoices">View invoice ledger</button>',
+    );
+    h += '<div class="alert"><b>Planning only.</b> Unpaid or expected invoices are not recorded cash. Check contractual terms and dated payments before contacting a customer.</div>';
+    h += '<div class="cards">' +
+      card("OVERDUE INVOICED", usd(d.summary.overdue.amount), d.summary.overdue.count + " outstanding invoices", "short") +
+      card("COMPLETED, UNBILLED", usd(d.summary.unbilled.amount), d.summary.unbilled.count + " work items") +
+      card("DUE WITHIN 7 DAYS", usd(d.summary.dueSoon.amount), d.summary.dueSoon.count + " invoices") +
+      card("DUE DATE MISSING", usd(d.summary.missingDue.amount), d.summary.missingDue.count + " invoices need verification") + '</div>';
+    const choices = Object.entries(labels).map(([key, label]) =>
+      '<option value="' + key + '" ' + (triageFilter === key ? "selected" : "") + '>' + esc(label) + '</option>'
+    ).join("");
+    const tableRows = matches.map((x) =>
+      '<tr><td><span class="tag ' + (x.kind === "scheduled" ? "green" : "") + '">' + esc(labels[x.kind]) + '</span></td>' +
+      '<td class="project">' + esc(x.externalKey) + '<span class="sub">' + esc(job(x.jobId)) + '</span></td>' +
+      '<td>' + usd(x.remaining) + '</td><td>' + esc(x.dueDate || x.completionDate || "Unknown") +
+      '<span class="sub">' + esc(clock(x)) + '</span></td><td>' + esc(x.action) + '</td></tr>'
+    ).join("") || '<tr><td colspan="5">No matching follow-ups for this as-of date.</td></tr>';
+    h += '<section class="panel" style="margin-top:24px"><div class="panel-head"><div><h2>Prioritized follow-ups</h2><p>Remaining amounts include dated payments and effective credits.</p></div><label>Show <select id="triage-filter"><option value="all" ' + (triageFilter === "all" ? "selected" : "") + '>All work</option>' +
+      choices + '</select></label></div><div class="table-wrap"><table><thead><tr><th>PRIORITY</th><th>INVOICE / PROJECT</th><th>REMAINING</th><th>DATE / CLOCK</th><th>NEXT REVIEW ACTION</th></tr></thead><tbody>' +
+      tableRows + '</tbody></table></div><div class="note">Priority: overdue → unbilled → due soon → missing due date → scheduled. Due soon means 0–' + d.dueSoonDays + ' calendar days. No autonomous collections messages are sent.</div></section>';
   }
   if (page === "invoices")
     h =
@@ -244,6 +285,11 @@ function bind() {
         }
       }),
   );
+  if ($("#triage-filter"))
+    $("#triage-filter").onchange = (e) => {
+      triageFilter = e.target.value;
+      render();
+    };
   if ($("#scenario"))
     $("#scenario").onchange = (e) => {
       scenario = e.target.checked;
