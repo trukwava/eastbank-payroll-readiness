@@ -121,3 +121,21 @@ test("revised payroll estimate preserves prior as-of value", () => {
   assert.equal(snapshot(s, "2026-11-09").payroll.payroll, 2250000);
   assert.equal(snapshot(s, "2026-11-10").payroll.payroll, 2300000);
 });
+
+test("a separate receipt what-if cannot include work that has never been invoiced", () => {
+  const s = seed();
+  const unbilled = s.invoices[10];
+  assert.equal(unbilled.invoiceDate, null);
+  unbilled.expectedDate = "2026-11-12";
+  assert.equal(snapshot(s, "2026-11-09").headroom, -650000);
+  const ignored = snapshot(s, "2026-11-09", true);
+  assert.equal(ignored.headroom, -650000);
+  assert.equal(ignored.receipt, 0);
+  assert.equal(ignored.unbilled > 0, true);
+  unbilled.invoiceDate = "2026-11-08";
+  unbilled.dueDate = "2026-11-23";
+  const scenario = snapshot(s, "2026-11-09", true);
+  assert.equal(scenario.receipt, unbilled.amount);
+  assert.equal(scenario.headroom, -650000 + unbilled.amount);
+  assert.equal(scenario.cash.amount, 1800000);
+});
