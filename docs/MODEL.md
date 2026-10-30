@@ -4,7 +4,7 @@ Primary user: fictional Eastbank Painting's office manager. Promise: explain whe
 
 ## P0
 
-Cash snapshot → Monday payroll estimate → deterministic readiness → source inspection → Markdown operating brief. Supporting flows: invoice CSV preview/acceptance, payments, weekly job estimates versus actuals, corrections, project budgets and approved change orders, timezone/category settings, history and local persistence.
+Cash snapshot → Monday payroll estimate → deterministic readiness → source inspection → Markdown operating brief. Supporting flows: invoice CSV preview/acceptance, payments, weekly job estimates versus actuals, corrections, project budgets and approved change orders, timezone/category settings, versioned backup export, validated restore, history and local persistence.
 
 Parking lot: real bank/accounting connectors, payroll execution, taxes, multi-currency, multi-user permissions, autonomous messages, model Q&A, production hosting. No model is used in calculations.
 
@@ -48,4 +48,4 @@ As-of is an effective-date view of current known records, not a complete bitempo
 
 Bind only to loopback. Host and mutation Origin checks, bounded requests/CSVs, server-side parsing/validation, text escaping, CSP, and a fixed server-selected organization protect this local demonstration. There is no production authentication or network deployment support. Do not expose the server publicly or enter real payroll information.
 
-Records persist in data/eastbank.sqlite until reset or deletion. Reset replaces only the demo aggregate. A JSON backup can be downloaded; recovery is manual by a developer from a trusted backup, with validation before insertion. The database and backups are excluded from source control. No raw sensitive payload logging or external requests exist in the app. No compliance certification is claimed.
+Records persist in data/eastbank.sqlite until reset or deletion. Reset replaces only the demo aggregate. A JSON backup can be downloaded; recovery is manual by a developer from a trusted backup, with validation before insertion. The database and backups are excluded from source control. Backup restoration is a destructive, explicit, server-revalidated local demo action: it atomically replaces the aggregate and adds a restore audit event. Review [backup/recovery rules](BACKUP_RECOVERY.md) before restoring. No raw sensitive payload logging or external requests exist in the app. No compliance certification is claimed.
