@@ -1,11 +1,21 @@
 import { createServer } from "node:http";
 import { DatabaseSync } from "node:sqlite";
 import { readFileSync, mkdirSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { seed, snapshot, preview, money, date, validateState } from "./core.ts";
+import { collectionsDesk } from "./triage.ts";
 const root = fileURLToPath(new URL(".", import.meta.url));
-mkdirSync(root + "data", { recursive: true });
-const db = new DatabaseSync(root + "data/eastbank.sqlite");
+const port = Number(process.env.EASTBANK_PORT || "48739");
+if (!Number.isInteger(port) || port < 1024 || port > 65535)
+  throw Error("EASTBANK_PORT must be an available non-privileged port");
+const dataDirectory = process.env.EASTBANK_DATA_DIR
+  ? resolve(process.env.EASTBANK_DATA_DIR)
+  : join(root, "data");
+mkdirSync(dataDirectory, { recursive: true });
+const db = new DatabaseSync(join(dataDirectory, "eastbank.sqlite"));
+const allowedHosts = new Set([`localhost:${port}`, `127.0.0.1:${port}`]);
+const allowedOrigins = new Set([`http://localhost:${port}`, `http://127.0.0.1:${port}`]);
 db.exec(
   "CREATE TABLE IF NOT EXISTS organization_state (id TEXT PRIMARY KEY CHECK(id='demo'), body TEXT NOT NULL CHECK(json_valid(body))); CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY); INSERT OR IGNORE INTO schema_migrations VALUES(1)",
 );
@@ -44,9 +54,7 @@ createServer(async (req, res) => {
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; frame-ancestors 'none'",
   );
   try {
-    if (
-      !["localhost:48739", "127.0.0.1:48739"].includes(req.headers.host || "")
-    )
+    if (!allowedHosts.has(req.headers.host || ""))
       throw Error("Host not allowed");
     const u = new URL(req.url!, "http://localhost");
     if (req.method === "GET" && u.pathname === "/api/state") {
@@ -60,17 +68,13 @@ createServer(async (req, res) => {
             u.searchParams.get("asof") || "2026-11-09",
             u.searchParams.get("scenario") === "true",
           ),
+          collectionsDesk: collectionsDesk(s, u.searchParams.get("asof") || "2026-11-09"),
         }),
       );
       return;
     }
     if (req.method === "POST" && u.pathname === "/api/action") {
-      if (
-        req.headers.origin &&
-        !["http://localhost:48739", "http://127.0.0.1:48739"].includes(
-          req.headers.origin,
-        )
-      )
+      if (req.headers.origin && !allowedOrigins.has(req.headers.origin))
         throw Error("Origin not allowed");
       let raw = "";
       for await (const chunk of req) {
@@ -116,7 +120,7 @@ createServer(async (req, res) => {
             id: id(),
             amount: money(b.amount),
             at: new Date(b.at).toISOString(),
-            source: String(b.source).slice(0, 200),
+            source: String(b.source ?? "").trim().slice(0, 200),
           };
           if (!x.source) throw Error("Source required");
           s.cashSnapshots.push(x);
@@ -128,7 +132,7 @@ createServer(async (req, res) => {
             payrollDate: b.date,
             payroll: money(b.amount),
             enteredAt: new Date(b.enteredAt).toISOString(),
-            source: String(b.source).slice(0, 200),
+            source: String(b.source ?? "").trim().slice(0, 200),
           };
           if (!x.source) throw Error("Source required");
           const previous = s.weeklyEstimates
@@ -153,7 +157,7 @@ createServer(async (req, res) => {
             category: b.category,
             amount: money(b.amount),
             date: b.date,
-            source: String(b.source).slice(0, 200),
+            source: String(b.source ?? "").trim().slice(0, 200),
             kind: b.kind === "estimate" ? "estimate" : "actual",
             replaces: old?.id,
           };
@@ -226,11 +230,12 @@ createServer(async (req, res) => {
         } else if (b.type === "commitment") {
           const x = {
             id: id(),
-            label: String(b.label).slice(0, 100),
+            label: String(b.label ?? "").trim().slice(0, 100),
             amount: money(b.amount),
             date: date(b.date),
             included: true,
           };
+          if (!x.label) throw Error("Commitment description required");
           s.commitments.push(x);
           audit(s, "Commitment added", null, x);
         } else if (b.type === "reset") {
@@ -268,6 +273,6 @@ createServer(async (req, res) => {
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({ error: (e as Error).message }));
   }
-}).listen(48739, "127.0.0.1", () =>
-  console.log("Eastbank ready at http://localhost:48739"),
+}).listen(port, "127.0.0.1", () =>
+  console.log(`Eastbank ready at http://localhost:${port}`),
 );
