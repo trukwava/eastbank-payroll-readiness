@@ -184,27 +184,27 @@ function render() {
       ) +
       `<div class="grid"><section class="panel"><h2>Record cash snapshot</h2><p>A sourced balance at a specific instant.</p>${form("cash", amount() + field("Timestamp with timezone offset", "at", "text", asof() + "T16:00:00-05:00") + field("Source", "source", "text", "Manual accounting balance"))}</section><section class="panel"><h2>Monday payroll estimate</h2><p>Unknown future payroll stays unknown.</p>${form("weekly", amount() + field("Payroll date", "date", "date", "2026-11-13") + field("Recorded at", "enteredAt", "text", asof() + "T09:00:00-05:00") + field("Source", "source", "text", "Monday office estimate"))}</section><section class="panel"><h2>Weekly job costs</h2><p>Friday payroll actuals use Labor. Estimates never consume budget.</p>${form("cost", jobField() + `<label>Category<select name="category">${opts(s.organization.categories)}</select></label><label>Entry type<select name="kind"><option value="actual">Actual cost</option><option value="estimate">Weekly estimate</option></select></label>` + amount() + dateField() + field("Source / correction reason", "source") + `<label>Correction target (optional)<select name="correctId"><option value="">New entry</option>${opts(s.costActuals.filter((x) => !s.costActuals.some((a) => a.replaces === x.id)).map((x) => ({ id: x.id, name: job(x.jobId) + " · " + x.category + " · " + usd(x.amount) })))}</select></label>`)}</section><section class="panel"><h2>Committed outgoing</h2><p>Included when due between the view date and payroll.</p>${form("commitment", field("Description", "label") + amount() + dateField())}</section></div><section class="panel"><h2>Source ledger</h2><div class="table-wrap"><table><tr><th>DATE</th><th>PROJECT</th><th>TYPE / CATEGORY</th><th>AMOUNT</th><th>SOURCE</th></tr>${s.costActuals.map((x) => `<tr><td>${x.date}</td><td>${esc(job(x.jobId))}</td><td>${x.kind} · ${esc(x.category)}${s.costActuals.some((a) => a.replaces === x.id) ? " · Superseded" : ""}</td><td>${usd(x.amount)}</td><td>${esc(x.source)}</td></tr>`).join("")}</table></div></section>`;
   if (page === "weekly") {
-    h += `<section class="panel" style="margin-top:20px"><h2>Payroll estimate vs. actual</h2><p>Actual payroll below is the sum of active Labor actuals dated on payday. No entries means unknown.</p>${
-      s.weeklyEstimates
-        .filter((w) => w.payrollDate <= asof())
-        .map((w) => {
-          const a = s.costActuals.filter(
-            (x) =>
-              x.date === w.payrollDate &&
-              x.kind === "actual" &&
-              x.category === "Labor" &&
-              !s.costActuals.some(
-                (c) => c.replaces === x.id && c.date <= asof(),
-              ),
-          );
-          return line(
-            w.payrollDate + " · estimate " + usd(w.payroll),
-            "Actual " +
-              (a.length ? usd(a.reduce((n, x) => n + x.amount, 0)) : "Unknown"),
-          );
-        })
-        .join("") || "<p>No completed payroll cycle for this as-of date.</p>"
-    }</section>`;
+    const history = data.payrollHistory || [];
+    h += '<section class="panel" style="margin-top:20px"><h2>Friday payroll reconciliation</h2>' +
+      '<p>Compare the latest estimate known by this as-of date to recorded Labor costs. Corrections follow the original payroll Friday but become effective only when entered. This is not a certified payroll close.</p>' +
+      '<div class="table-wrap"><table><thead><tr><th>PAYROLL FRIDAY</th><th>LAST KNOWN ESTIMATE</th><th>RECORDED LABOR</th><th>ACTUAL − ESTIMATE</th><th>JOB COVERAGE</th></tr></thead><tbody>' +
+      (history.map((w) =>
+        '<tr><td class="project">' + esc(w.payrollDate) + '</td><td>' + usd(w.estimate) +
+        '<span class="sub">' + esc(w.estimateSource) + '</span></td><td>' + usd(w.actual) +
+        '</td><td>' + (w.variance == null ? 'Unknown' : ((w.variance > 0 ? '+' : '') + usd(w.variance))) +
+        '<span class="sub">' + (w.variance == null ? 'Actual not recorded' : w.variance > 0 ? 'Over estimate' : w.variance < 0 ? 'Under estimate' : 'Matches estimate') + '</span></td>' +
+        '<td>' + w.recordedJobs + ' of ' + w.totalJobs + ' projects<span class="sub">Coverage does not certify completeness</span></td></tr>'
+      ).join('') || '<tr><td colspan="5">No completed payroll estimate is known by this as-of date.</td></tr>') +
+      '</tbody></table></div>' +
+      history.map((w) =>
+        '<details><summary>' + esc(w.payrollDate) + ' · Inspect ' + w.sources.length + ' Labor source records</summary>' +
+        '<p>' + esc(w.interpretation) + '</p>' +
+        (w.sources.map((x) => line(
+          esc(job(x.jobId)) + ' · ' + esc(x.source) + (x.corrected ? ' <small>(corrected ' + esc(x.effectiveDate) + '; original payroll date ' + esc(x.originalPayrollDate) + ')</small>' : ''),
+          usd(x.amount)
+        )).join('') || '<p>No Labor actuals recorded for this payroll Friday.</p>') +
+        '</details>'
+      ).join('') + '</section>';
   }
   if (page === "jobs") {
     h = heading(
@@ -320,7 +320,15 @@ function bind() {
               (x) =>
                 `${x.externalKey} | ${job(x.jobId)} | ${x.status} | remaining ${usd(x.remaining)} | billing lag ${x.billingLag ?? "Unknown"} | invoice clock ${x.clock ?? "Unknown"}`,
             )
-            .join("\n"),
+            .join("\n") +
+          "\n\n## Friday payroll reconciliation\n" +
+          (data.payrollHistory || []).map((w) =>
+            w.payrollDate + " | estimate " + usd(w.estimate) +
+            " | recorded Labor " + usd(w.actual) +
+            " | actual minus estimate " + usd(w.variance) +
+            " | sources " + w.sources.map((x) => job(x.jobId) + ": " + usd(x.amount) + " (" + x.source + ")").join("; ")
+          ).join("\n") +
+          "\n\nLabor actuals are unverified source entries, not a certified payroll close. Unknown actuals must not be interpreted as zero.\n",
       );
     };
   if ($("#backup"))
