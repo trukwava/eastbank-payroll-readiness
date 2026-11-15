@@ -42,7 +42,7 @@ Cash uses the latest snapshot whose organization-local calendar date is on/befor
 
 Budget remaining = original budget + dated approved changes − active actual costs. Corrections append a replacement and retain the prior entry/audit. A correction's date (labelled **Visible from** in the cost form) controls only the as-of date from which it replaces its parent, and must be on or after the original record's date. Cost records have no entry timestamp: a correction dated in the past changes every as-of view on or after its date once it is saved, while views before its date retain the original. Job cost estimates are stored separately by kind and do not consume budget. Actual payroll for a payroll Friday is the sum of active Labor actuals whose original record (the first in its correction chain) is dated on that Friday. A correction always counts toward the original record's Friday, whatever its own date; it cannot move a cost to another Friday, and the app cannot reassign or delete a recorded cost. Absence means unknown, not zero. Existing category labels remain in budget breakdowns after settings changes.
 
-As-of is an effective-date view of current known records, not a complete bitemporal accounting close. New jobs and organization settings are not versioned by as-of. Avoid interpreting a historical view as a previously certified report.
+As-of is an effective-date view of current known records, not a complete bitemporal accounting close. New jobs and organization settings are not versioned by as-of; Friday payroll job coverage therefore counts current projects, so a project created later raises the denominator shown for earlier Fridays. Avoid interpreting a historical view as a previously certified report.
 
 ## Boundaries and retention
 

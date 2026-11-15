@@ -51,6 +51,8 @@ export function payrollHistory(state: RecordSet, asof: string) {
       actual,
       variance,
       recordedJobs: new Set(labor.map((entry) => entry.jobId)).size,
+      // Jobs carry no creation or close date, so this is the current project
+      // count, not the count at the payroll date. Label it as such.
       totalJobs: state.jobs.length,
       sources: labor.map((entry) => ({
         id: entry.id, jobId: entry.jobId, amount: entry.amount,

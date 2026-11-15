@@ -8,7 +8,7 @@ The **Weekly workspace → Friday payroll reconciliation** section shows each co
 - **Variance = recorded Labor actuals − latest known estimate**, in exact integer USD cents. Positive is over estimate, negative is under estimate.
 - Job coverage and the sources/amounts supporting that figure.
 
-The screen does not infer that Labor records are complete or constitute a paid payroll register. Coverage (e.g., 3 of 3 projects) means only that at least one Labor actual is recorded for each of those jobs. No bank payment or payroll execution is performed.
+The screen does not infer that Labor records are complete or constitute a paid payroll register. Coverage (e.g., 3 of 3 current projects) means only that at least one Labor actual is recorded for each of those jobs. The denominator is the **current** project count: projects carry no creation or close date, so the app cannot tell which existed on a past Friday. Creating a project later changes an earlier Friday from "3 of 3" to "3 of 4 current projects"; the screen and the Markdown export both say "current projects" for this reason. No bank payment or payroll execution is performed.
 
 ## Correction lineage
 

@@ -193,7 +193,7 @@ function render() {
         '<span class="sub">' + esc(w.estimateSource) + '</span></td><td>' + usd(w.actual) +
         '</td><td>' + (w.variance == null ? 'Unknown' : ((w.variance > 0 ? '+' : '') + usd(w.variance))) +
         '<span class="sub">' + (w.variance == null ? 'Actual not recorded' : w.variance > 0 ? 'Over estimate' : w.variance < 0 ? 'Under estimate' : 'Matches estimate') + '</span></td>' +
-        '<td>' + w.recordedJobs + ' of ' + w.totalJobs + ' projects<span class="sub">Coverage does not certify completeness</span></td></tr>'
+        '<td>' + w.recordedJobs + ' of ' + w.totalJobs + ' current projects<span class="sub">Project list is not dated; coverage does not certify completeness</span></td></tr>'
       ).join('') || '<tr><td colspan="5">No completed payroll estimate is known by this as-of date.</td></tr>') +
       '</tbody></table></div>' +
       history.map((w) =>
@@ -326,9 +326,10 @@ function bind() {
             w.payrollDate + " | estimate " + usd(w.estimate) +
             " | recorded Labor " + usd(w.actual) +
             " | actual minus estimate " + usd(w.variance) +
+            " | coverage " + w.recordedJobs + " of " + w.totalJobs + " current projects" +
             " | sources " + w.sources.map((x) => job(x.jobId) + ": " + usd(x.amount) + " (" + x.source + ")").join("; ")
           ).join("\n") +
-          "\n\nLabor actuals are unverified source entries, not a certified payroll close. Unknown actuals must not be interpreted as zero.\n",
+          "\n\nLabor actuals are unverified source entries, not a certified payroll close. Unknown actuals must not be interpreted as zero. Corrections count toward the original record's payroll Friday and appear from their own date. Coverage counts today's projects; the project list is not dated.\n",
       );
     };
   if ($("#backup"))

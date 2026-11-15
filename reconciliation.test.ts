@@ -115,6 +115,21 @@ test("correcting Labor classification removes it from payroll sum at the effecti
   assert.equal(payrollHistory(s, "2026-11-09")[0].actual, 1500000);
 });
 
+test("job coverage counts current projects because projects are not dated", () => {
+  const s = seed();
+  assert.equal(payrollHistory(s, "2026-11-09")[0].recordedJobs, 3);
+  assert.equal(payrollHistory(s, "2026-11-09")[0].totalJobs, 3);
+  // A project created after the 2026-11-06 payroll has no creation date in
+  // state, so it is counted in that Friday's denominator: "3 of 4 current".
+  s.jobs.push({ id: "j4", name: "Later project", budget: 100000 });
+  validateState(s);
+  const row = payrollHistory(s, "2026-11-09")[0];
+  assert.equal(row.payrollDate, "2026-11-06");
+  assert.equal(row.recordedJobs, 3);
+  assert.equal(row.totalJobs, 4);
+  assert.equal(row.actual, 2100000);
+});
+
 test("cycle in a corrupted cost correction chain does not hang reconciliation", () => {
   const s = seed();
   s.costActuals.push({id:"cyc1",jobId:"j1",kind:"actual",category:"Labor",amount:1,date:"2026-11-06",source:"corrupt",replaces:"cyc2"});
