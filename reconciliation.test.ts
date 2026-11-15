@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { seed } from "./core.ts";
+import { seed, validateState } from "./core.ts";
 import { payrollHistory } from "./reconciliation.ts";
 
 test("Friday payroll reconciliation uses original sourced Labor actuals", () => {
@@ -36,6 +36,47 @@ test("correction effective after payroll belongs to original Friday, historicall
   assert.equal(revised.variance, 50000);
   assert.equal(revised.sources.find((x) => x.jobId === "j1").originalPayrollDate, "2026-11-06");
   assert.equal(revised.sources.find((x) => x.jobId === "j1").effectiveDate, "2026-11-08");
+});
+
+test("correction dated on a different payroll Friday stays on the original Friday", () => {
+  const s = seed();
+  s.costActuals.push({
+    id: "dated-next-friday", jobId: "j1", kind: "actual", category: "Labor",
+    date: "2026-11-13", amount: 650000, source: "Reconciled register",
+    replaces: "a0",
+  });
+  validateState(s);
+  const before = payrollHistory(s, "2026-11-12");
+  assert.equal(before[0].payrollDate, "2026-11-06");
+  assert.equal(before[0].actual, 2100000);
+  const [nextFriday, originalFriday] = payrollHistory(s, "2026-11-14");
+  assert.equal(nextFriday.payrollDate, "2026-11-13");
+  assert.equal(nextFriday.actual, null);
+  assert.equal(nextFriday.variance, null);
+  assert.equal(nextFriday.sources.length, 0);
+  assert.equal(originalFriday.payrollDate, "2026-11-06");
+  assert.equal(originalFriday.actual, 2150000);
+  assert.equal(originalFriday.variance, 50000);
+  const corrected = originalFriday.sources.find((x) => x.id === "dated-next-friday");
+  assert.equal(corrected.effectiveDate, "2026-11-13");
+  assert.equal(corrected.originalPayrollDate, "2026-11-06");
+});
+
+test("backdated correction is visible from its own date, not from when it was saved", () => {
+  const s = seed();
+  assert.equal(payrollHistory(s, "2026-11-07")[0].actual, 2100000);
+  // Saved later (for example on 2026-11-12) but dated 2026-11-07. Cost records
+  // have no entry timestamp, so the earlier 2026-11-07 view now changes.
+  s.costActuals.push({
+    id: "backdated", jobId: "j1", kind: "actual", category: "Labor",
+    date: "2026-11-07", amount: 650000, source: "Late register fix",
+    replaces: "a0",
+  });
+  validateState(s);
+  assert.equal(payrollHistory(s, "2026-11-06")[0].actual, 2100000);
+  assert.equal(payrollHistory(s, "2026-11-07")[0].actual, 2150000);
+  assert.equal(payrollHistory(s, "2026-11-07")[0].variance, 50000);
+  assert.equal(payrollHistory(s, "2026-11-09")[0].actual, 2150000);
 });
 
 test("second correction keeps lineage and does not double count old revisions", () => {

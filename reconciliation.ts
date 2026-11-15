@@ -1,10 +1,10 @@
 import { date, localDate, type RecordSet } from "./core.ts";
 
 /**
- * A cost correction records when the correction became effective. Payroll
- * attribution, however, follows the date of the original cost being corrected.
- * This keeps a corrected Friday payroll amount on that Friday's cycle without
- * leaking later corrections into earlier as-of views.
+ * A cost correction always counts toward the payroll Friday of the original
+ * record in its chain. The correction's own date controls only the as-of date
+ * from which it is visible. Cost records carry no entry timestamp, so a
+ * correction dated in the past also changes as-of views from that date on.
  */
 export function payrollHistory(state: RecordSet, asof: string) {
   date(asof);
