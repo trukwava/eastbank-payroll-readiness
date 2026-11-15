@@ -280,6 +280,22 @@ function bind() {
   document
     .querySelectorAll("[data-go]")
     .forEach((b) => (b.onclick = () => go(b.dataset.go)));
+  const costForm = document.querySelector('form[data-action="cost"]');
+  if (costForm)
+    costForm.elements.correctId.onchange = () => {
+      const target = data.state.costActuals.find(
+        (x) => x.id === costForm.elements.correctId.value,
+      );
+      const dateInput = costForm.elements.date;
+      dateInput.min = target ? target.date : "";
+      if (!target) return;
+      // A correction keeps the original's project and entry type (the server
+      // enforces this); start from its category too, which may be changed.
+      costForm.elements.jobId.value = target.jobId;
+      costForm.elements.kind.value = target.kind;
+      costForm.elements.category.value = target.category;
+      if (dateInput.value < target.date) dateInput.value = target.date;
+    };
   document.querySelectorAll("form[data-action]").forEach(
     (f) =>
       (f.onsubmit = async (e) => {

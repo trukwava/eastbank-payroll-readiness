@@ -173,6 +173,12 @@ createServer(async (req, res) => {
             ? s.costActuals.find((x) => x.id === b.correctId)
             : null;
           if (b.correctId && !old) throw Error("Correction target missing");
+          if (old && b.jobId !== old.jobId)
+            throw Error("A correction keeps the original record's project (" +
+              (s.jobs.find((j) => j.id === old.jobId)?.name ?? old.jobId) +
+              "). To record a cost on another project, add a new entry.");
+          if (old && b.date < old.date)
+            throw Error("A correction cannot be dated before the original record (" + old.date + ").");
           const x = {
             id: id(),
             jobId: b.jobId,

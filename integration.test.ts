@@ -178,3 +178,37 @@ test("HTTP backup restore: preview is read-only, requires confirmation, validate
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("cost corrections keep the original project and date order, with clear errors", { timeout: 30000 }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), "eastbank-correction-"));
+  const port = await availablePort();
+  let server: Awaited<ReturnType<typeof startServer>> | null = null;
+  try {
+    server = await startServer(port, dir);
+    const origin = server.origin;
+    const action = async (body: object) => {
+      const response = await fetch(origin + "/api/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Origin: origin },
+        body: JSON.stringify(body),
+      });
+      return { status: response.status, body: await response.json() };
+    };
+    // a1 is Oak Street School's (j2) Labor actual dated 2026-11-06.
+    const correction = { type: "cost", correctId: "a1", category: "Labor", kind: "actual", amount: "7100", source: "Register fix" };
+    const wrongProject = await action({ ...correction, jobId: "j1", date: "2026-11-08" });
+    assert.equal(wrongProject.status, 400);
+    assert.match(wrongProject.body.error, /keeps the original record's project \(Oak Street School\)/);
+    const tooEarly = await action({ ...correction, jobId: "j2", date: "2026-11-05" });
+    assert.equal(tooEarly.status, 400);
+    assert.match(tooEarly.body.error, /cannot be dated before the original record \(2026-11-06\)/);
+    const valid = await action({ ...correction, jobId: "j2", date: "2026-11-08" });
+    assert.equal(valid.status, 200);
+    const again = await action({ ...correction, jobId: "j2", date: "2026-11-09" });
+    assert.equal(again.status, 400);
+    assert.match(again.body.error, /already corrected/);
+  } finally {
+    if (server) await stopServer(server.process);
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
