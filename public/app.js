@@ -27,6 +27,7 @@ const $ = (s) => document.querySelector(s),
           style: "currency",
           currency: "USD",
         }).format(n / 100),
+  signedUsd = (n) => (n > 0 ? "+" : "") + usd(n),
   asof = () => $("#asof").value;
 const job = (id) => data.state.jobs.find((j) => j.id === id)?.name || "Unknown";
 async function load() {
@@ -191,7 +192,7 @@ function render() {
       (history.map((w) =>
         '<tr><td class="project">' + esc(w.payrollDate) + '</td><td>' + usd(w.estimate) +
         '<span class="sub">' + esc(w.estimateSource) + '</span></td><td>' + usd(w.actual) +
-        '</td><td>' + (w.variance == null ? 'Unknown' : ((w.variance > 0 ? '+' : '') + usd(w.variance))) +
+        '</td><td>' + signedUsd(w.variance) +
         '<span class="sub">' + (w.variance == null ? 'Actual not recorded' : w.variance > 0 ? 'Over estimate' : w.variance < 0 ? 'Under estimate' : 'Matches estimate') + '</span></td>' +
         '<td>' + w.recordedJobs + ' of ' + w.totalJobs + ' current projects<span class="sub">Project list is not dated; coverage does not certify completeness</span></td></tr>'
       ).join('') || '<tr><td colspan="5">No completed payroll estimate is known by this as-of date.</td></tr>') +
@@ -325,7 +326,7 @@ function bind() {
           (data.payrollHistory || []).map((w) =>
             w.payrollDate + " | estimate " + usd(w.estimate) +
             " | recorded Labor " + usd(w.actual) +
-            " | actual minus estimate " + usd(w.variance) +
+            " | actual minus estimate " + signedUsd(w.variance) +
             " | coverage " + w.recordedJobs + " of " + w.totalJobs + " current projects" +
             " | sources " + w.sources.map((x) => job(x.jobId) + ": " + usd(x.amount) + " (" + x.source + ")").join("; ")
           ).join("\n") +

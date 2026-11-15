@@ -20,11 +20,12 @@ The GitHub Actions `browser` job installs Chromium and Linux dependencies and ex
 1. Payroll overview loads with the 2026-11-09 synthetic scenario and the expected −$6,500 headroom.
 2. First keyboard Tab reaches a visible **Skip to main content** link.
 3. Navigation opens the collections action desk, marks the active page, and supports filtering without dropping focus.
-4. CSV preview shows two ready rows but does not persist them; acceptance increases the invoice count from 12 to 14 without changing payroll headroom.
-5. Reload preserves the accepted import in the local SQLite database.
-6. Downloaded Markdown brief contains the same recorded cash, headroom, and accepted invoice seen in the app.
-7. The main page remains within the mobile viewport at 390px width and the collections desk stays reachable.
-8. No uncaught browser JavaScript errors occur.
+4. Weekly workspace reconciles 2026-11-06 Labor to its estimate with "3 of 3 current projects" and shows 2026-11-13 Labor as Unknown. A Labor correction saved through the cost form, visible from 2026-11-08, then shows **+$500.00** over estimate on the original 2026-11-06 Friday.
+5. CSV preview shows two ready rows but does not persist them; acceptance increases the invoice count from 12 to 14 without changing payroll headroom.
+6. Reload preserves the accepted import in the local SQLite database.
+7. Downloaded Markdown brief contains the same recorded cash, headroom, accepted invoice, signed payroll variance (+$500.00) and current-project coverage seen in the app.
+8. The main page remains within the mobile viewport at 390px width and the collections desk stays reachable.
+9. No uncaught browser JavaScript errors occur.
 
 The app also gives keyboard focus to the new page heading on navigation, exposes semantic navigation and main landmarks, makes horizontally scrollable tables focusable, and uses a polite status region for success or errors.
 
