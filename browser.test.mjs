@@ -105,8 +105,15 @@ test("real Chromium: navigation, payroll, collections, invoice preview, persiste
     await costForm.getByLabel("Amount · USD").fill("6500");
     await costForm.getByLabel("Cost date (new entry) / Visible from (correction)").fill("2026-11-08");
     await costForm.getByLabel("Source / correction reason").fill("Reconciled register");
+    // Choosing a target from another project switches the project and earliest date to match it.
+    await costForm.getByLabel("Correction target (optional)")
+      .selectOption({ label: "Oak Street School · Labor · $7,000.00" });
+    assert.equal(await costForm.getByLabel("Project").inputValue(), "j2");
+    assert.equal(await costForm.getByLabel("Entry type").inputValue(), "actual");
+    assert.equal(await costForm.getByLabel("Cost date (new entry) / Visible from (correction)").getAttribute("min"), "2026-11-06");
     await costForm.getByLabel("Correction target (optional)")
       .selectOption({ label: "Riverside Apartments · Labor · $6,000.00" });
+    assert.equal(await costForm.getByLabel("Project").inputValue(), "j1");
     await costForm.getByRole("button", { name: "Save record" }).click();
     await page.getByText("Saved locally. Change history updated.").waitFor();
     assert.match(await firstFriday.textContent(), /\+\$500\.00/);
