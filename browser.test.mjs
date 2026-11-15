@@ -85,6 +85,33 @@ test("real Chromium: navigation, payroll, collections, invoice preview, persiste
     assert.equal(await page.locator("#triage-filter").evaluate((el) => document.activeElement === el), true,
       "Changing filter should not lose keyboard focus");
 
+    await navigation.getByRole("button", { name: /Weekly workspace/ }).click();
+    await page.getByRole("heading", { name: "The weekly workspace" }).waitFor();
+    const reconciliation = page.locator("section.panel").filter({
+      has: page.getByRole("heading", { name: "Friday payroll reconciliation" }),
+    });
+    const firstFriday = reconciliation.locator("tbody tr").filter({ hasText: "2026-11-06" });
+    assert.match(await firstFriday.textContent(), /\$21,000\.00/);
+    assert.match(await firstFriday.textContent(), /Matches estimate/);
+    await page.locator("#asof").fill("2026-11-14");
+    const secondFriday = reconciliation.locator("tbody tr").filter({ hasText: "2026-11-13" });
+    await secondFriday.waitFor();
+    assert.match(await secondFriday.textContent(), /Unknown/);
+    await page.locator("#asof").fill("2026-11-09");
+    await page.getByRole("heading", { name: "The weekly workspace" }).waitFor();
+    await secondFriday.waitFor({ state: "detached" });
+    assert.match(await firstFriday.textContent(), /3 of 3 current projects/);
+    const costForm = page.locator('form[data-action="cost"]');
+    await costForm.getByLabel("Amount · USD").fill("6500");
+    await costForm.getByLabel("Cost date (new entry) / Visible from (correction)").fill("2026-11-08");
+    await costForm.getByLabel("Source / correction reason").fill("Reconciled register");
+    await costForm.getByLabel("Correction target (optional)")
+      .selectOption({ label: "Riverside Apartments · Labor · $6,000.00" });
+    await costForm.getByRole("button", { name: "Save record" }).click();
+    await page.getByText("Saved locally. Change history updated.").waitFor();
+    assert.match(await firstFriday.textContent(), /\+\$500\.00/);
+    assert.match(await firstFriday.textContent(), /Over estimate/);
+
     await navigation.getByRole("button", { name: /Import invoices/ }).click();
     await page.getByRole("heading", { name: "Bring your invoices into focus." }).waitFor();
     const csv = readFileSync(join(root, "samples", "valid.csv"), "utf8");
@@ -129,6 +156,9 @@ test("real Chromium: navigation, payroll, collections, invoice preview, persiste
     assert.match(brief, /Recorded cash: \$18,000\.00/);
     assert.match(brief, /Signed projected headroom: -\$6,500\.00/);
     assert.match(brief, /DEMO-2001/);
+    assert.match(brief, /Friday payroll reconciliation/);
+    assert.match(brief, /2026-11-06 \| estimate \$21,000\.00/);
+    assert.match(brief, /recorded Labor \$21,500\.00 \| actual minus estimate \+\$500\.00 \| coverage 3 of 3 current projects/);
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.reload();
